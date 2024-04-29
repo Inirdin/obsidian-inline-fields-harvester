@@ -43,8 +43,9 @@ def format_field(line):
                 new_lines.append("- " + line.strip())
         item = "\n".join(new_lines) # combine all new lines into one string
     else: # when item isn't list of values
-        if not item.strip().isdigit(): # enclose anything but numbers
-            item = '"' + item.strip() + '"'
+        if item != '':
+            if not item.strip().isdigit(): # enclose anything but numbers
+                item = '"' + item.strip() + '"'
 
     return field + ": " + item + "\n"
 
@@ -55,16 +56,26 @@ def process_file(file_path):
 
     inline_fields = []
     content_no_fields = []
+    codeblock = False
 
     # Remove original inline fields outside of the frontmatter
     for line in content:
-        if '::' in line:
+        # Ignore "::" in code block
+        if '```' in line:
+            codeblock = not codeblock
+
+        # Ignore "::" in inline code block
+        pattern = r'`.*::.*`' 
+        inline_code = re.search(pattern, line) is not None
+
+        # Put inline fields to new list and remove them from rest of the file contents
+        if '::' in line and not codeblock and not inline_code:
             inline_fields.append(format_field(line))
         else:
-            content_no_fields.append(line)  # Remove .strip()+'\n' here
+            content_no_fields.append(line)
 
     # Check if there are any inline fields
-    if content_no_fields:  
+    if inline_fields != []:  
         # Find frontmatter
         frontmatter_index = 0
         frontmatter_started = False
